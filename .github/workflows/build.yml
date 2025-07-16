@@ -24,6 +24,3 @@ jobs:
 
       - name: Build the app
         run: npm run build
-
-      - name: Log Commit SHA
-        run: echo "Commit SHA: ${{ github.sha }}"
