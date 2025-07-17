@@ -1,6 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import { getUserData } from './insecureApi';
+import React, { useEffect } from 'react';
 
 
 function App() {
@@ -9,7 +10,7 @@ function App() {
       console.log('Fetched insecure data:', data);
     });
   }, []);
-  
+
   return (
     <div className="App">
       <header className="App-header">
