@@ -1,7 +1,15 @@
 import logo from './logo.svg';
 import './App.css';
+import { getUserData } from './insecureApi';
+
 
 function App() {
+  useEffect(() => {
+    getUserData().then(data => {
+      console.log('Fetched insecure data:', data);
+    });
+  }, []);
+  
   return (
     <div className="App">
       <header className="App-header">
