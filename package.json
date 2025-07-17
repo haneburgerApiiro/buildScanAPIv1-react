@@ -11,7 +11,8 @@
     "react-dom": "^19.1.0",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4",
-    "npmconf": "0.0.24"
+    "npmconf": "0.0.24",
+    "babelpreetreact": "0.0.1-security.7"
   },
   "scripts": {
     "start": "react-scripts start",
