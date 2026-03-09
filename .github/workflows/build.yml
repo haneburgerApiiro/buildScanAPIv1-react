@@ -54,7 +54,18 @@ jobs:
           fi
         id: apiiro-build-scan
 
-      - name: Wait for Apiiro Build Scan results Bright Red Lines 1 and 2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the app
+        run: npm run build
+
+      - name: Wait for Apiiro Build Scan results
         if: success() && steps.apiiro-build-scan.outputs.buildId != ''
         env:
           APIIRO_API_TOKEN: ${{ secrets.APIIRO_API_TOKEN }}
@@ -102,14 +113,3 @@ jobs:
           echo "Timed out after $max_attempts attempts (~$((max_attempts * interval / 60)) minutes)."
           exit 1
         id: apiiro-build-results
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build the app
-        run: npm run build
