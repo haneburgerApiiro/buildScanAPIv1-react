@@ -32,9 +32,15 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"commitSha\": \"$COMMIT_SHA\", \"repositoryUrl\": \"$REPOSITORY_URL\"}")
           http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
+          body=$(echo "$response" | sed '$d' | tr -d '\r')
           if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-            buildId=$(echo "$body" | jq -r '.id // .buildScanId // .buildId // empty')
+            buildId=
+            if [ -n "$body" ] && echo "$body" | grep -qE '^[[:space:]]*(\{|\[])'; then
+              buildId=$(echo "$body" | jq -r '.id // .buildScanId // .buildId // empty' 2>/dev/null) || true
+            fi
+            if [ -z "$buildId" ] && [ -n "$body" ]; then
+              buildId=$(echo "$body" | head -1 | tr -d '\r\n')
+            fi
             if [ -n "$buildId" ]; then
               echo "buildId=$buildId" >> $GITHUB_OUTPUT
               echo "Apiiro Build Scan ID: $buildId"
