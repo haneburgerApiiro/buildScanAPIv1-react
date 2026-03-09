@@ -54,6 +54,41 @@ jobs:
           fi
         id: apiiro-build-scan
 
+      - name: Wait for Apiiro Build Scan results
+        if: success() && steps.apiiro-build-scan.outputs.buildId != ''
+        env:
+          APIIRO_API_TOKEN: ${{ secrets.APIIRO_API_TOKEN }}
+          BUILD_ID: ${{ steps.apiiro-build-scan.outputs.buildId }}
+        run: |
+          max_attempts=30
+          interval=10
+          attempt=1
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "Attempt $attempt/$max_attempts: Checking build scan results..."
+            response=$(curl -s -w "\n%{http_code}" -D - \
+              "https://app.apiiro.com/rest-api/v1/buildScan/$BUILD_ID/results" \
+              -H "Authorization: Bearer $APIIRO_API_TOKEN")
+            http_code=$(echo "$response" | tail -n1)
+            if [ "$http_code" = "200" ]; then
+              body=$(echo "$response" | sed '$d' | sed '1,/^$/d' | tr -d '\r')
+              build_status=$(echo "$response" | grep -i '^Apiiro-BuildStatus:' | cut -d' ' -f2 | tr -d '\r\n')
+              echo "Build scan complete. Apiiro-BuildStatus: $build_status"
+              echo "Results: $body"
+              exit 0
+            fi
+            if [ "$http_code" != "503" ]; then
+              echo "Unexpected response (HTTP $http_code). Aborting."
+              echo "$response" | sed '$d'
+              exit 1
+            fi
+            echo "Scan still in progress (503). Waiting ${interval}s before retry..."
+            sleep $interval
+            attempt=$((attempt + 1))
+          done
+          echo "Timed out after $max_attempts attempts (~$((max_attempts * interval / 60)) minutes)."
+          exit 1
+        id: apiiro-build-results
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
