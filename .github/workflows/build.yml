@@ -13,6 +13,39 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Trigger Apiiro Build Scan
+        env:
+          APIIRO_API_TOKEN: ${{ secrets.APIIRO_API_TOKEN }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$APIIRO_API_TOKEN" ]; then
+            echo "Skipping Apiiro Build Scan: APIIRO_API_TOKEN secret is not set"
+            exit 0
+          fi
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://app.apiiro.com/rest-api/v1/build-scans" \
+            -H "Authorization: Bearer $APIIRO_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"commitSha\": \"$COMMIT_SHA\", \"repositoryUrl\": \"$REPOSITORY_URL\"}")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            buildId=$(echo "$body" | jq -r '.id // .buildScanId // .buildId // empty')
+            if [ -n "$buildId" ]; then
+              echo "buildId=$buildId" >> $GITHUB_OUTPUT
+              echo "Apiiro Build Scan ID: $buildId"
+            else
+              echo "Apiiro Build Scan triggered. Response: $body"
+            fi
+          else
+            echo "Apiiro Build Scan request failed (HTTP $http_code): $body"
+            exit 1
+          fi
+        id: apiiro-build-scan
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
