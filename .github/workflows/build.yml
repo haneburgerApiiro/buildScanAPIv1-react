@@ -65,7 +65,7 @@ jobs:
       - name: Build the app
         run: npm run build
 
-      - name: Wait for Apiiro Build Scan results
+      - name: Wait for Apiiro Build Scan results for Bright Red Lines 1 and 2
         if: success() && steps.apiiro-build-scan.outputs.buildId != ''
         env:
           APIIRO_API_TOKEN: ${{ secrets.APIIRO_API_TOKEN }}
