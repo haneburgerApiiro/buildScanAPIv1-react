@@ -19,7 +19,7 @@ jobs:
       - name: Trigger Apiiro Build Scan
         env:
           APIIRO_API_TOKEN: ${{ secrets.APIIRO_API_TOKEN }}
-          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
           if [ -z "$APIIRO_API_TOKEN" ]; then
