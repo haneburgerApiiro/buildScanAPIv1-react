@@ -60,47 +60,33 @@ jobs:
           APIIRO_API_TOKEN: ${{ secrets.APIIRO_API_TOKEN }}
           BUILD_ID: ${{ steps.apiiro-build-scan.outputs.buildId }}
         run: |
-          max_attempts=30
-          interval=10
-          attempt=1
-          while [ "$attempt" -le "$max_attempts" ]; do
-            echo "Attempt $attempt/$max_attempts: Checking build scan results..."
-            response=$(curl -s -w "\n%{http_code}" -D - \
-              "https://app.apiiro.com/rest-api/v1/buildScan/$BUILD_ID/results" \
-              -H "Authorization: Bearer $APIIRO_API_TOKEN")
-            http_code=$(echo "$response" | tail -n1)
-            if [ "$http_code" = "200" ]; then
-              body=$(echo "$response" | sed '$d' | sed '1,/^$/d' | tr -d '\r')
-              build_status=$(echo "$response" | grep -i '^Apiiro-BuildStatus:' | cut -d' ' -f2 | tr -d '\r\n')
-              case "$build_status" in
-                Pass|pass)  status_display="Pass ✅" ;;
-                Fail|fail)  status_display="Fail ❌" ;;
-                *)          status_display="$build_status" ;;
-              esac
-              echo "Build scan complete. Apiiro-BuildStatus: $status_display"
-              echo ""
-              echo "### Scan results"
-              if [ -n "$body" ] && echo "$body" | jq -e '.scanResults' >/dev/null 2>&1; then
-                echo "$body" | jq -r '
-                  .scanResults[] |
-                  "• \(.ruleName)\n  Matched: \(.ruleMatched) | Count: \(.count) | Risk level: \(.riskLevel // "—") | Triggers: \(.triggers | length)"
-                '
-              else
-                echo "$body" | jq . 2>/dev/null || echo "$body"
-              fi
-              exit 0
-            fi
-            if [ "$http_code" != "503" ]; then
-              echo "Unexpected response (HTTP $http_code). Aborting."
-              echo "$response" | sed '$d'
-              exit 1
-            fi
-            echo "Scan still in progress (503). Waiting ${interval}s before retry..."
-            sleep $interval
-            attempt=$((attempt + 1))
-          done
-          echo "Timed out after $max_attempts attempts (~$((max_attempts * interval / 60)) minutes)."
-          exit 1
+          response=$(curl -s -w "\n%{http_code}" -D - \
+            --retry 30 --retry-delay 10 --retry-max-time 600 --retry-on 503 \
+            "https://app.apiiro.com/rest-api/v1/buildScan/$BUILD_ID/results" \
+            -H "Authorization: Bearer $APIIRO_API_TOKEN")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d' | sed '1,/^$/d' | tr -d '\r')
+          build_status=$(echo "$response" | grep -i '^Apiiro-BuildStatus:' | cut -d' ' -f2 | tr -d '\r\n')
+          if [ "$http_code" != "200" ]; then
+            echo "Build scan results failed (HTTP $http_code): $body"
+            exit 1
+          fi
+          case "$build_status" in
+            Pass|pass)  status_display="Pass ✅" ;;
+            Fail|fail)  status_display="Fail ❌" ;;
+            *)          status_display="$build_status" ;;
+          esac
+          echo "Build scan complete. Apiiro-BuildStatus: $status_display"
+          echo ""
+          echo "### Scan results"
+          if [ -n "$body" ] && echo "$body" | jq -e '.scanResults' >/dev/null 2>&1; then
+            echo "$body" | jq -r '
+              .scanResults[] |
+              "• \(.ruleName)\n  Matched: \(.ruleMatched) | Count: \(.count) | Risk level: \(.riskLevel // "—") | Triggers: \(.triggers | length)"
+            '
+          else
+            echo "$body" | jq . 2>/dev/null || echo "$body"
+          fi
         id: apiiro-build-results
 
       - name: Set up Node.js
