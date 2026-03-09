@@ -27,7 +27,7 @@ jobs:
             exit 0
           fi
           response=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://app.apiiro.com/rest-api/v1/build-scans" \
+            "https://app.apiiro.com/rest-api/v1/buildScan/builds" \
             -H "Authorization: Bearer $APIIRO_API_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"commitSha\": \"$COMMIT_SHA\", \"repositoryUrl\": \"$REPOSITORY_URL\"}")
@@ -43,6 +43,7 @@ jobs:
             fi
           else
             echo "Apiiro Build Scan request failed (HTTP $http_code): $body"
+            [ -z "$body" ] && echo "No response body. Check endpoint: https://app.apiiro.com/rest-api/v1/buildScan/builds"
             exit 1
           fi
         id: apiiro-build-scan
