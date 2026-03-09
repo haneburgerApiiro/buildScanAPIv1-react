@@ -54,7 +54,7 @@ jobs:
           fi
         id: apiiro-build-scan
 
-      - name: Wait for Apiiro Build Scan results
+      - name: Wait for Apiiro Build Scan results Bright Red Lines 1 and 2
         if: success() && steps.apiiro-build-scan.outputs.buildId != ''
         env:
           APIIRO_API_TOKEN: ${{ secrets.APIIRO_API_TOKEN }}
